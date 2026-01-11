@@ -1,0 +1,37 @@
+name: campus_iot_app
+description: Plataforma IoT para campus universitario
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  
+  # HTTP & API
+  http: ^1.1.0
+  
+  # State Management
+  provider: ^6.1.1
+  # O: riverpod: ^2.4.9
+  
+  # Charts
+  fl_chart: ^0.65.0
+  
+  # MQTT (opcional para tiempo real)
+  mqtt_client: ^10.0.0
+  
+  # Storage local
+  shared_preferences: ^2.2.2
+  
+  # UI
+  intl: ^0.18.1
+  timeago: ^3.6.0
+  
+  # Icons
+  cupertino_icons: ^1.0.6
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.1

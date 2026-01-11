@@ -1,0 +1,21 @@
+# Node
+node_modules/
+npm-debug.log
+.env
+
+# Python
+__pycache__/
+*.pyc
+
+# Docker
+.docker/
+
+# Flutter
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.dart_tool/
+build/
+web/
+.idea/
+*.iml

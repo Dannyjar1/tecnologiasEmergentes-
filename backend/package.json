@@ -1,0 +1,19 @@
+{
+  "name": "campus-iot-backend",
+  "version": "1.0.0",
+  "description": "Backend for the Campus IoT Platform",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js"
+  },
+  "dependencies": {
+    "dotenv": "^17.2.3",
+    "express": "^4.18.2",
+    "mqtt": "^5.3.4",
+    "pg": "^8.11.3"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  }
+}

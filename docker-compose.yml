@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: campus-iot-db
+    environment:
+      POSTGRES_DB: campus_iot
+      POSTGRES_USER: campus_admin
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init-db.sql:/docker-entrypoint-initdb.d/init.sql
+    restart: unless-stopped
+
+  mosquitto:
+    image: eclipse-mosquitto:2.0
+    container_name: campus-mqtt-broker
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    volumes:
+      - ./mosquitto/config:/mosquitto/config
+      - ./mosquitto/data:/mosquitto/data
+      - ./mosquitto/log:/mosquitto/log
+    restart: unless-stopped
+
+  backend:
+    build: ./backend
+    container_name: campus-iot-backend
+    ports:
+      - "8080:3000"
+    environment:
+      - DATABASE_URL=postgresql://campus_admin:${DB_PASSWORD}@postgres:5432/campus_iot
+      - MQTT_BROKER_URL=mqtt://mosquitto:1883
+    depends_on:
+      - postgres
+      - mosquitto
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
