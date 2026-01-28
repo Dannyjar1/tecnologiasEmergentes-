@@ -19,3 +19,7 @@ build/
 web/
 .idea/
 *.iml
+
+# Mosquitto (MUY IMPORTANTE)
+mosquitto/log/
+mosquitto/data/
