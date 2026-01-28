@@ -7,7 +7,9 @@ import 'package:campus_iot_app/providers/telemetry_provider.dart';
 import 'package:campus_iot_app/widgets/telemetry_chart.dart';
 import 'package:campus_iot_app/widgets/real_time_value_card.dart';
 import 'package:campus_iot_app/config/theme.dart';
+import 'package:campus_iot_app/config/constants.dart';
 import 'package:intl/intl.dart';
+import 'package:campus_iot_app/screens/devices/edit_device_screen.dart';
 
 class DeviceDetailScreen extends StatefulWidget {
   final Device device;
@@ -27,7 +29,7 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
     final telemetryProvider = context.read<TelemetryProvider>();
     telemetryProvider.loadTelemetry(
       deviceId: widget.device.deviceId,
-      limit: 50,
+      limit: 100, // Increased limit for multi-sensor data
     );
     
     // Subscribe to real-time updates
@@ -43,8 +45,34 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
     super.dispose();
   }
 
+  List<String> _getSensorTypes() {
+    if (widget.device.metadata != null && 
+        widget.device.metadata!['sensors'] != null &&
+        widget.device.metadata!['sensors'] is List) {
+      return List<String>.from(widget.device.metadata!['sensors']);
+    }
+    // Fallback for legacy or single-sensor devices
+    if (widget.device.type != DeviceTypes.multi) {
+        return [widget.device.type];
+    }
+    return [];
+  }
+
+  String _getMetricForType(String type) {
+    switch (type) {
+      case 'light':
+        return 'illumination';
+      case 'energy':
+        return 'power';
+      default:
+        return type;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final sensorTypes = _getSensorTypes();
+
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.device.name),
@@ -67,7 +95,7 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
         onRefresh: () async {
           await context.read<TelemetryProvider>().loadTelemetry(
             deviceId: widget.device.deviceId,
-            limit: 50,
+            limit: 100,
           );
         },
         child: SingleChildScrollView(
@@ -81,22 +109,38 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
               
               const SizedBox(height: 24),
               
-              // Real-time Value
-              Consumer<TelemetryProvider>(
-                builder: (context, provider, child) {
-                  final latestValue = provider.getLatestValue(widget.device.deviceId);
-                  
-                  return RealTimeValueCard(
-                    telemetry: latestValue,
-                    deviceType: widget.device.type,
-                    isLoading: provider.isLoading,
-                  );
-                },
-              ),
+              // Dynamic Real-time Cards
+              if (sensorTypes.isEmpty)
+                 const Center(child: Text("No sensors configured for this device.")),
+
+              ...sensorTypes.map((type) {
+                final metric = _getMetricForType(type);
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 16.0),
+                  child: Consumer2<TelemetryProvider, DeviceProvider>(
+                    builder: (context, telemetryProvider, deviceProvider, child) {
+                      final latestValue = telemetryProvider.getLatestValueForMetric(widget.device.deviceId, metric);
+                      
+                      // Get reactive device status
+                      final currentDevice = deviceProvider.devices.firstWhere(
+                          (d) => d.deviceId == widget.device.deviceId,
+                          orElse: () => widget.device
+                      );
+                      
+                      return RealTimeValueCard(
+                        telemetry: latestValue,
+                        deviceType: type,
+                        isLoading: telemetryProvider.isLoading && latestValue == null,
+                        isOffline: currentDevice.status == 'inactive',
+                      );
+                    },
+                  ),
+                );
+              }).toList(),
               
               const SizedBox(height: 24),
               
-              // Historical Chart
+              // Historical Charts
               const Text(
                 'Histórico',
                 style: TextStyle(
@@ -106,25 +150,43 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
               ),
               const SizedBox(height: 12),
               
-              Consumer<TelemetryProvider>(
-                builder: (context, provider, child) {
-                  final history = provider.getTelemetryHistory(widget.device.deviceId);
-                  
-                  return Card(
-                    child: Container(
-                      height: 300,
-                      padding: const EdgeInsets.all(8),
-                      child: provider.isLoading && history.isEmpty
-                          ? const Center(child: CircularProgressIndicator())
-                          : TelemetryChart(
-                              data: history,
-                              metric: widget.device.type,
-                              lineColor: _getChartColor(),
+              ...sensorTypes.map((type) {
+                 final metric = _getMetricForType(type);
+                 return Padding(
+                   padding: const EdgeInsets.only(bottom: 24.0),
+                   child: Column(
+                     crossAxisAlignment: CrossAxisAlignment.start,
+                     children: [
+                       Padding(
+                         padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                         child: Text(DeviceTypes.getDisplayName(type), 
+                           style: TextStyle(fontWeight: FontWeight.w600, color: Colors.grey[700])),
+                       ),
+                       const SizedBox(height: 8),
+                       Consumer<TelemetryProvider>(
+                        builder: (context, provider, child) {
+                          final history = provider.getTelemetryHistory(widget.device.deviceId)
+                                             .where((t) => t.metric == metric).toList();
+                          
+                          return Card(
+                            child: Container(
+                              height: 250,
+                              padding: const EdgeInsets.all(8),
+                              child: provider.isLoading && history.isEmpty
+                                  ? const Center(child: CircularProgressIndicator())
+                                  : TelemetryChart(
+                                      data: history,
+                                      metric: type, // Pass original type for color/labels
+                                      lineColor: _getChartColor(type),
+                                    ),
                             ),
-                    ),
-                  );
-                },
-              ),
+                          );
+                        },
+                      ),
+                     ],
+                   ),
+                 );
+              }).toList(),
               
               const SizedBox(height: 24),
               
@@ -198,7 +260,7 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
             const Divider(height: 32),
             
             _buildInfoRow(Icons.fingerprint, 'ID', widget.device.deviceId),
-            _buildInfoRow(Icons.category, 'Tipo', widget.device.type),
+            _buildInfoRow(Icons.category, 'Tipo', _getSensorTypes().join(', ')), // Show all types
             _buildInfoRow(Icons.location_on, 'Ubicación', 
               widget.device.location ?? 'No especificada'),
             if (widget.device.building != null)
@@ -248,11 +310,20 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
       return const SizedBox.shrink();
     }
     
+    // Filter out internal 'sensors' metadata as it's already shown as cards
+    final displayMetadata = widget.device.metadata!.entries
+        .where((e) => e.key != 'sensors')
+        .toList();
+        
+    if (displayMetadata.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Metadata',
+          'Información Adicional', // Changed from 'Metadata' to be more user friendly
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
@@ -263,7 +334,7 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
-              children: widget.device.metadata!.entries.map((entry) {
+              children: displayMetadata.map((entry) {
                 return Padding(
                   padding: const EdgeInsets.symmetric(vertical: 4),
                   child: Row(
@@ -285,24 +356,56 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
     );
   }
   
-  Color _getChartColor() {
-    switch (widget.device.type) {
+  Color _getChartColor(String type) {
+    switch (type) {
       case 'temperature':
         return AppColors.accentOrange;
       case 'humidity':
         return AppColors.infoBlue;
       case 'occupancy':
         return AppColors.accentPurple;
+      case 'light':
+        return Colors.amber;
+      case 'energy':
+        return Colors.green;
       default:
         return AppColors.primaryBlue;
     }
   }
   
-  void _showEditDialog(BuildContext context) {
-    // TODO: Implement edit dialog
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Función de edición próximamente')),
+  void _showEditDialog(BuildContext context) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => EditDeviceScreen(device: widget.device),
+      ),
     );
+    
+    // Refresh device info from provider to get updated status
+    if (mounted) {
+       final deviceProvider = context.read<DeviceProvider>();
+       final updatedDevice = deviceProvider.devices.firstWhere(
+          (d) => d.deviceId == widget.device.deviceId,
+          orElse: () => widget.device,
+       );
+       
+       if (updatedDevice != widget.device) {
+         setState(() {
+           // We can't easily reassign widget.device as it's final in the State,
+           // but normally we would want the parent or a provider to handle this.
+           // For now, let's trigger a full refresh or just accept that 
+           // provider.devices is updated, BUT widget.device is still old.
+           // Ideally, this screen should use Consumer<DeviceProvider> to find self.
+         });
+         // Trigger API reload just in case
+         await deviceProvider.loadDevices();
+         Navigator.pushReplacement(
+              context, 
+              MaterialPageRoute(builder: (context) => 
+                  DeviceDetailScreen(device: deviceProvider.devices.firstWhere((d) => d.deviceId == widget.device.deviceId))) 
+         );
+       }
+    }
   }
   
   void _showDeleteConfirmation(BuildContext context) {

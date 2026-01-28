@@ -19,7 +19,8 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
   final _buildingController = TextEditingController();
   final _floorController = TextEditingController();
   
-  String _selectedType = DeviceTypes.temperature;
+  // Multi-select support
+  final List<String> _selectedTypes = [];
   String _selectedProtocol = Protocols.mqtt;
   bool _isLoading = false;
   
@@ -35,6 +36,9 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Filter out 'multi-sensor' from selection options, we construct it dynamically
+    final availableTypes = DeviceTypes.all.where((t) => t != DeviceTypes.multi).toList();
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Agregar Dispositivo'),
@@ -44,7 +48,7 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            // Header card with instructions
+            // Header card
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -54,32 +58,32 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
               ),
               child: Row(
                 children: [
-                  Icon(Icons.info_outline, color: Colors.blue[700], size: 28),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Nuevo Dispositivo IoT',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                            color: Colors.blue[900],
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Completa la información del dispositivo que deseas agregar al sistema',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: Colors.blue[700],
-                            height: 1.3,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                   Icon(Icons.info_outline, color: Colors.blue[700], size: 28),
+                   const SizedBox(width: 12),
+                   Expanded(
+                     child: Column(
+                       crossAxisAlignment: CrossAxisAlignment.start,
+                       children: [
+                         Text(
+                           'Nuevo Dispositivo IoT',
+                           style: TextStyle(
+                             fontWeight: FontWeight.bold,
+                             fontSize: 16,
+                             color: Colors.blue[900],
+                           ),
+                         ),
+                         const SizedBox(height: 4),
+                         Text(
+                           'Selecciona uno o varios sensores para este dispositivo.',
+                           style: TextStyle(
+                             fontSize: 13,
+                             color: Colors.blue[700],
+                             height: 1.3,
+                           ),
+                         ),
+                       ],
+                     ),
+                   ),
                 ],
               ),
             ),
@@ -89,23 +93,15 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
             // Device ID
             TextFormField(
               controller: _deviceIdController,
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 labelText: 'ID del Dispositivo *',
-                hintText: 'lab-01-temp',
-                helperText: 'Identificador único para el dispositivo',
-                prefixIcon: const Icon(Icons.fingerprint),
-                suffixIcon: Tooltip(
-                  message: 'Usa letras, números y guiones. Ejemplo: lab-01-temp',
-                  child: Icon(Icons.help_outline, color: Colors.grey[400]),
-                ),
+                hintText: 'lab-01-multi',
+                helperText: 'Identificador único',
+                prefixIcon: Icon(Icons.fingerprint),
               ),
               validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'El ID es obligatorio';
-                }
-                if (value.length < 3) {
-                  return 'Mínimo 3 caracteres';
-                }
+                if (value == null || value.isEmpty) return 'El ID es obligatorio';
+                if (value.length < 3) return 'Mínimo 3 caracteres';
                 if (!RegExp(r'^[a-zA-Z0-9-]+$').hasMatch(value)) {
                   return 'Solo letras, números y guiones';
                 }
@@ -118,48 +114,62 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
             // Name
             TextFormField(
               controller: _nameController,
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 labelText: 'Nombre del Dispositivo *',
-                hintText: 'Sensor Temperatura Laboratorio 01',
-                helperText: 'Nombre descriptivo para identificar el dispositivo',
-                prefixIcon: const Icon(Icons.label),
+                hintText: 'Sensor Ambiental Lab 1',
+                prefixIcon: Icon(Icons.label),
               ),
               validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'El nombre es obligatorio';
-                }
+                if (value == null || value.isEmpty) return 'El nombre es obligatorio';
                 return null;
               },
             ),
             
             const SizedBox(height: 16),
             
-            // Type Dropdown
-            DropdownButtonFormField<String>(
-              value: _selectedType,
-              decoration: InputDecoration(
-                labelText: 'Tipo de Dispositivo *',
-                helperText: 'Selecciona qué medirá este dispositivo',
-                prefixIcon: const Icon(Icons.category),
-              ),
-              items: DeviceTypes.all.map((type) {
-                return DropdownMenuItem(
-                  value: type,
-                  child: Row(
-                    children: [
-                      Icon(_getTypeIcon(type), size: 20),
-                      const SizedBox(width: 12),
-                      Text(DeviceTypes.getDisplayName(type)),
-                    ],
-                  ),
-                );
-              }).toList(),
-              onChanged: (value) {
-                setState(() {
-                  _selectedType = value!;
-                });
-              },
+            // Sensor Types Selection (Multi-Select)
+            const Text(
+              'Sensores Integrados *',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
+            const SizedBox(height: 8),
+            Container(
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey[300]!),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                children: availableTypes.map((type) {
+                  return CheckboxListTile(
+                    title: Row(
+                      children: [
+                        Icon(_getTypeIcon(type), size: 20, color: Colors.grey[700]),
+                        const SizedBox(width: 12),
+                        Text(DeviceTypes.getDisplayName(type)),
+                      ],
+                    ),
+                    value: _selectedTypes.contains(type),
+                    onChanged: (bool? checked) {
+                      setState(() {
+                        if (checked == true) {
+                          _selectedTypes.add(type);
+                        } else {
+                          _selectedTypes.remove(type);
+                        }
+                      });
+                    },
+                  );
+                }).toList(),
+              ),
+            ),
+            if (_selectedTypes.isEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 8.0, left: 12.0),
+                child: Text(
+                  'Selecciona al menos un tipo de sensor',
+                  style: TextStyle(color: Theme.of(context).colorScheme.error, fontSize: 12),
+                ),
+              ),
             
             const SizedBox(height: 16),
             
@@ -168,8 +178,6 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
               controller: _locationController,
               decoration: const InputDecoration(
                 labelText: 'Ubicación (Opcional)',
-                hintText: 'Laboratorio de Física',
-                helperText: 'Lugar específico donde está el dispositivo',
                 prefixIcon: Icon(Icons.location_on),
               ),
             ),
@@ -181,8 +189,6 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
               controller: _buildingController,
               decoration: const InputDecoration(
                 labelText: 'Edificio (Opcional)',
-                hintText: 'Edificio A',
-                helperText: 'Nombre o código del edificio',
                 prefixIcon: Icon(Icons.business),
               ),
             ),
@@ -194,42 +200,24 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
               controller: _floorController,
               decoration: const InputDecoration(
                 labelText: 'Piso (Opcional)',
-                hintText: '2',
-                helperText: 'Número del piso',
                 prefixIcon: Icon(Icons.stairs),
               ),
               keyboardType: TextInputType.number,
-              validator: (value) {
-                if (value != null && value.isNotEmpty) {
-                  final floor = int.tryParse(value);
-                  if (floor == null) {
-                    return 'Ingresa solo números';
-                  }
-                }
-                return null;
-              },
             ),
             
             const SizedBox(height: 16),
             
-            // Protocol Dropdown
+            // Protocol
             DropdownButtonFormField<String>(
               value: _selectedProtocol,
               decoration: const InputDecoration(
-                labelText: 'Protocolo de Comunicación *',
-                helperText: 'Cómo se comunica el dispositivo',
+                labelText: 'Protocolo *',
                 prefixIcon: Icon(Icons.settings_input_antenna),
               ),
               items: Protocols.all.map((protocol) {
                 return DropdownMenuItem(
                   value: protocol,
-                  child: Row(
-                    children: [
-                      Icon(_getProtocolIcon(protocol), size: 20),
-                      const SizedBox(width: 12),
-                      Text(protocol),
-                    ],
-                  ),
+                  child: Text(protocol),
                 );
               }).toList(),
               onChanged: (value) {
@@ -241,35 +229,6 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
             
             const SizedBox(height: 32),
             
-            // Info box
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.amber[50],
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.amber[200]!, width: 1),
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(Icons.lightbulb_outline, color: Colors.amber[700], size: 20),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Los campos marcados con * son obligatorios',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.amber[900],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            
-            const SizedBox(height: 24),
-            
-            // Submit Button
             ElevatedButton(
               onPressed: _isLoading ? null : _submitForm,
               style: ElevatedButton.styleFrom(
@@ -294,25 +253,34 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
       return;
     }
     
+    if (_selectedTypes.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Debes seleccionar al menos un sensor'), backgroundColor: Colors.red),
+      );
+      return;
+    }
+    
     setState(() {
       _isLoading = true;
     });
     
+    // Determine type: specific if 1, multi if > 1
+    final String primaryType = _selectedTypes.length == 1 
+        ? _selectedTypes.first 
+        : DeviceTypes.multi;
+        
     final device = Device(
       deviceId: _deviceIdController.text.trim(),
       name: _nameController.text.trim(),
-      type: _selectedType,
-      location: _locationController.text.trim().isNotEmpty
-          ? _locationController.text.trim()
-          : null,
-      building: _buildingController.text.trim().isNotEmpty
-          ? _buildingController.text.trim()
-          : null,
-      floor: _floorController.text.trim().isNotEmpty
-          ? int.tryParse(_floorController.text.trim())
-          : null,
+      type: primaryType,
+      location: _locationController.text.trim().isNotEmpty ? _locationController.text.trim() : null,
+      building: _buildingController.text.trim().isNotEmpty ? _buildingController.text.trim() : null,
+      floor: _floorController.text.trim().isNotEmpty ? int.tryParse(_floorController.text.trim()) : null,
       protocol: _selectedProtocol,
       status: 'active',
+      metadata: {
+        'sensors': _selectedTypes // Store all selected sensors here
+      },
     );
     
     try {
@@ -322,18 +290,12 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
         if (success) {
           Navigator.pop(context);
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Dispositivo agregado exitosamente'),
-              backgroundColor: Colors.green,
-            ),
+            const SnackBar(content: Text('Dispositivo agregado exitosamente'), backgroundColor: Colors.green),
           );
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(
-                context.read<DeviceProvider>().error ?? 
-                'Error al agregar dispositivo'
-              ),
+              content: Text(context.read<DeviceProvider>().error ?? 'Error al agregar dispositivo'),
               backgroundColor: Colors.red,
             ),
           );
@@ -350,29 +312,12 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
   
   IconData _getTypeIcon(String type) {
     switch (type) {
-      case DeviceTypes.temperature:
-        return Icons.thermostat;
-      case DeviceTypes.occupancy:
-        return Icons.people;
-      case DeviceTypes.humidity:
-        return Icons.water_drop;
-      case DeviceTypes.light:
-        return Icons.lightbulb;
-      case DeviceTypes.energy:
-        return Icons.bolt;
-      default:
-        return Icons.device_unknown;
-    }
-  }
-  
-  IconData _getProtocolIcon(String protocol) {
-    switch (protocol.toLowerCase()) {
-      case 'mqtt':
-        return Icons.cloud_queue;
-      case 'http':
-        return Icons.http;
-      default:
-        return Icons.settings_input_antenna;
+      case DeviceTypes.temperature: return Icons.thermostat_outlined;
+      case DeviceTypes.occupancy: return Icons.people_alt;
+      case DeviceTypes.humidity: return Icons.water_drop;
+      case DeviceTypes.light: return Icons.wb_incandescent;
+      case DeviceTypes.energy: return Icons.flash_on;
+      default: return Icons.device_unknown;
     }
   }
 }

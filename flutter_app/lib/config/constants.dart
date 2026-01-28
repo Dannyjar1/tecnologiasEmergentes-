@@ -5,6 +5,7 @@ class DeviceTypes {
   static const String occupancy = 'occupancy';
   static const String light = 'light';
   static const String energy = 'energy';
+  static const String multi = 'multi-sensor';
   
   static const List<String> all = [
     temperature,
@@ -12,6 +13,7 @@ class DeviceTypes {
     occupancy,
     light,
     energy,
+    multi,
   ];
   
   static String getDisplayName(String type) {

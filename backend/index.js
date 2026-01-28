@@ -1,17 +1,20 @@
 require('dotenv').config();
-console.log("DEBUG → DB_PASSWORD =", process.env.DB_PASSWORD);
-
 
 const express = require('express');
+const cors = require('cors');
 const mqtt = require('mqtt');
 const { Pool } = require('pg');
 
 const app = express();
 const port = process.env.PORT || 3000;
 
-// PostgreSQL client
+// PostgreSQL client - Using direct configuration to avoid dotenv issues
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL
+  user: 'campus_admin',
+  host: 'postgres',  // Container name in docker-compose
+  database: 'campus_iot',
+  password: 'mysecretpassword',
+  port: 5432,
 });
 
 // MQTT client
@@ -54,6 +57,7 @@ mqttClient.on('error', (error) => {
   console.error('MQTT Client Error:', error);
 });
 
+app.use(cors()); // Enable CORS for all routes
 app.use(express.json());
 
 app.get('/', (req, res) => {
@@ -132,11 +136,53 @@ app.get('/api/devices/:deviceId', async (req, res) => {
 app.patch('/api/devices/:deviceId', async (req, res) => {
   try {
     const { deviceId } = req.params;
-    const { name, status } = req.body;
+    const { name, status, location, building, floor, metadata } = req.body;
+
+    // Dynamically build the update query
+    let queryText = 'UPDATE devices SET ';
+    const queryValues = [];
+    const setClauses = [];
+
+    if (name !== undefined) {
+      setClauses.push(`name = $${queryValues.length + 1}`);
+      queryValues.push(name);
+    }
+    if (status !== undefined) {
+      setClauses.push(`status = $${queryValues.length + 1}`);
+      queryValues.push(status);
+    }
+    if (location !== undefined) {
+      setClauses.push(`location = $${queryValues.length + 1}`);
+      queryValues.push(location);
+    }
+    if (building !== undefined) {
+      setClauses.push(`building = $${queryValues.length + 1}`);
+      queryValues.push(building);
+    }
+    if (floor !== undefined) {
+      setClauses.push(`floor = $${queryValues.length + 1}`);
+      queryValues.push(floor);
+    }
+    if (metadata !== undefined) {
+      setClauses.push(`metadata = $${queryValues.length + 1}`);
+      queryValues.push(metadata);
+    }
+
+    setClauses.push('updated_at = CURRENT_TIMESTAMP');
+
+    if (setClauses.length === 1) { // Only updated_at
+      return res.status(400).json({ error: 'No fields to update' });
+    }
+
+    queryText += setClauses.join(', ');
+    queryText += ` WHERE device_id = $${queryValues.length + 1} RETURNING *`;
+    queryValues.push(deviceId);
+
     const query = {
-      text: 'UPDATE devices SET name = COALESCE($1, name), status = COALESCE($2, status), updated_at = CURRENT_TIMESTAMP WHERE device_id = $3 RETURNING *',
-      values: [name, status, deviceId],
+      text: queryText,
+      values: queryValues,
     };
+
     const result = await pool.query(query);
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Device not found' });

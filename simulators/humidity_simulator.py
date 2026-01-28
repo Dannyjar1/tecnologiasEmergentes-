@@ -6,25 +6,28 @@ import random
 from datetime import datetime
 
 # Configuration
-BROKER = "localhost"  # Use localhost for local development
+BROKER = "localhost"
 PORT = 1883
-DEVICE_ID = "aula-201-occ"
-TOPIC = f"campus/{DEVICE_ID}/occupancy"
+DEVICE_ID = "lab-01-humidity"
+TOPIC = f"campus/{DEVICE_ID}/humidity"
 
-def get_realistic_occupancy():
-    """Returns occupancy based on the time of day"""
+def get_realistic_humidity():
+    """Returns humidity level based on time of day and weather simulation"""
     hour = datetime.now().hour
     
-    if 7 <= hour < 12:
-        return random.randint(20, 45)
-    elif 12 <= hour < 14:
-        return random.randint(5, 15)
-    elif 14 <= hour < 18:
-        return random.randint(25, 40)
+    # Simulate indoor humidity variations
+    if 6 <= hour < 9:
+        return round(random.uniform(55, 65), 1)  # Morning (higher)
+    elif 9 <= hour < 12:
+        return round(random.uniform(45, 55), 1)  # Mid-morning (AC kicks in)
+    elif 12 <= hour < 15:
+        return round(random.uniform(40, 50), 1)  # Afternoon (lowest)
+    elif 15 <= hour < 18:
+        return round(random.uniform(45, 55), 1)  # Late afternoon
     elif 18 <= hour < 22:
-        return random.randint(10, 25)
+        return round(random.uniform(50, 60), 1)  # Evening (rising)
     else:
-        return 0
+        return round(random.uniform(55, 70), 1)  # Night (highest, no AC)
 
 # Connection callback
 def on_connect(client, userdata, flags, rc, properties):
@@ -50,25 +53,30 @@ client.loop_start()
 # Wait for connection
 time.sleep(2)
 
-print(f"👨‍👩‍👧‍👦 Occupancy Simulator started: {DEVICE_ID}")
+print(f"💧 Humidity Simulator started: {DEVICE_ID}")
 print(f"📡 Publishing to topic: {TOPIC}\n")
 
 try:
     while True:
-        occupancy = get_realistic_occupancy()
+        humidity = get_realistic_humidity()
 
         payload = {
-            "value": occupancy,
-            "unit": "persons",
-            "timestamp": datetime.utcnow().isoformat() + "Z"
+            "value": humidity,
+            "unit": "%",
+            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "metadata": {
+                "battery": random.randint(70, 100),
+                "signal": random.randint(-60, -30)
+            }
         }
 
         # Publish via MQTT
         result = client.publish(TOPIC, json.dumps(payload), qos=1)
         result.wait_for_publish()
-        print(f"📤 Published: {occupancy} persons")
+        print(f"📤 Published: {humidity}%")
 
-        time.sleep(10)
+        # Wait 5 seconds
+        time.sleep(5)
 
 except KeyboardInterrupt:
     print("\n🛑 Simulator stopped")

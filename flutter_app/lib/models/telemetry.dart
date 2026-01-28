@@ -19,10 +19,10 @@ class Telemetry {
 
   factory Telemetry.fromJson(Map<String, dynamic> json) {
     return Telemetry(
-      id: json['id'],
-      deviceId: json['deviceId'],
+      id: json['id'] != null ? int.tryParse(json['id'].toString()) : null,
+      deviceId: json['device_id'] ?? json['deviceId'], // Handle both snake_case and camelCase
       metric: json['metric'],
-      value: (json['value'] as num).toDouble(),
+      value: double.parse(json['value'].toString()), // Parse string or number
       unit: json['unit'],
       timestamp: DateTime.parse(json['timestamp']),
       metadata: json['metadata'],

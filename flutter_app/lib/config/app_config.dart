@@ -1,10 +1,10 @@
 class AppConfig {
   // API REST Configuration
-  static const String apiBaseUrl = 'http://127.0.0.1:8080/api';
+  static const String apiBaseUrl = 'http://localhost:8080/api';
   static const Duration apiTimeout = Duration(seconds: 30);
   
   // MQTT Configuration
-  static const String mqttBrokerUrl = '127.0.0.1';
+  static const String mqttBrokerUrl = 'localhost';
   static const int mqttBrokerPort = 1883;
   static const String mqttClientId = 'flutter_campus_iot';
   

@@ -2,19 +2,46 @@ import 'package:flutter/material.dart';
 import 'package:campus_iot_app/models/telemetry.dart';
 import 'package:campus_iot_app/config/theme.dart';
 import 'package:intl/intl.dart';
+import 'dart:async';
 
-class RealTimeValueCard extends StatelessWidget {
+class RealTimeValueCard extends StatefulWidget {
   final Telemetry? telemetry;
   final String deviceType;
   final bool isLoading;
+  final bool isOffline;
   
   const RealTimeValueCard({
     Key? key,
     this.telemetry,
     required this.deviceType,
     this.isLoading = false,
+    this.isOffline = false,
   }) : super(key: key);
-  
+
+  @override
+  State<RealTimeValueCard> createState() => _RealTimeValueCardState();
+}
+
+class _RealTimeValueCardState extends State<RealTimeValueCard> {
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    // Refresh UI every second to update relative time
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (mounted && widget.telemetry != null && !widget.isOffline) {
+        setState(() {});
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Card(
@@ -72,7 +99,9 @@ class RealTimeValueCard extends StatelessWidget {
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: AppColors.successGreen.withOpacity(0.1),
+                        color: widget.isOffline 
+                            ? Colors.grey[300] 
+                            : AppColors.successGreen.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Row(
@@ -81,18 +110,18 @@ class RealTimeValueCard extends StatelessWidget {
                           Container(
                             width: 6,
                             height: 6,
-                            decoration: const BoxDecoration(
-                              color: AppColors.successGreen,
+                            decoration: BoxDecoration(
+                              color: widget.isOffline ? Colors.grey[600] : AppColors.successGreen,
                               shape: BoxShape.circle,
                             ),
                           ),
                           const SizedBox(width: 6),
-                          const Text(
-                            'EN VIVO',
+                          Text(
+                            widget.isOffline ? 'OFFLINE' : 'EN VIVO',
                             style: TextStyle(
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
-                              color: AppColors.successGreen,
+                              color: widget.isOffline ? Colors.grey[600] : AppColors.successGreen,
                             ),
                           ),
                         ],
@@ -106,19 +135,43 @@ class RealTimeValueCard extends StatelessWidget {
             const SizedBox(height: 24),
             
             // Value
-            if (isLoading)
+            if (widget.isLoading)
               const Center(
                 child: Padding(
                   padding: EdgeInsets.all(16.0),
                   child: CircularProgressIndicator(),
                 ),
               )
-            else if (telemetry == null)
+            else if (widget.isOffline)
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    children: [
+                      Icon(Icons.cloud_off, size: 48, color: Colors.grey[400]),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Dispositivo Inactivo',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey[500],
+                        ),
+                      ),
+                      Text(
+                        'Sin recepción de datos',
+                        style: TextStyle(fontSize: 12, color: Colors.grey[400]),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            else if (widget.telemetry == null)
               Center(
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Text(
-                    'Sin datos',
+                    'Esperando datos...',
                     style: TextStyle(
                       fontSize: 16,
                       color: Colors.grey[400],
@@ -136,7 +189,7 @@ class RealTimeValueCard extends StatelessWidget {
                     textBaseline: TextBaseline.alphabetic,
                     children: [
                       Text(
-                        telemetry!.value.toStringAsFixed(1),
+                        widget.telemetry!.value.toStringAsFixed(1),
                         style: TextStyle(
                           fontSize: 48,
                           fontWeight: FontWeight.bold,
@@ -145,7 +198,7 @@ class RealTimeValueCard extends StatelessWidget {
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        telemetry!.unit ?? '',
+                        widget.telemetry!.unit ?? '',
                         style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.w500,
@@ -167,7 +220,7 @@ class RealTimeValueCard extends StatelessWidget {
                       ),
                       const SizedBox(width: 6),
                       Text(
-                        'Actualizado: ${_formatTimestamp(telemetry!.timestamp)}',
+                        'Actualizado: ${_formatTimestamp(widget.telemetry!.timestamp)}',
                         style: TextStyle(
                           fontSize: 12,
                           color: Colors.grey[600],
@@ -177,7 +230,7 @@ class RealTimeValueCard extends StatelessWidget {
                   ),
                   
                   // Metadata if available
-                  if (telemetry!.metadata != null) ...[
+                  if (widget.telemetry!.metadata != null) ...[
                     const SizedBox(height: 12),
                     const Divider(),
                     const SizedBox(height: 12),
@@ -185,17 +238,17 @@ class RealTimeValueCard extends StatelessWidget {
                       spacing: 16,
                       runSpacing: 8,
                       children: [
-                        if (telemetry!.metadata!['battery'] != null)
+                        if (widget.telemetry!.metadata!['battery'] != null)
                           _MetadataChip(
                             icon: Icons.battery_charging_full,
                             label: 'Batería',
-                            value: '${telemetry!.metadata!['battery']}%',
+                            value: '${widget.telemetry!.metadata!['battery']}%',
                           ),
-                        if (telemetry!.metadata!['signal'] != null)
+                        if (widget.telemetry!.metadata!['signal'] != null)
                           _MetadataChip(
                             icon: Icons.signal_cellular_alt,
                             label: 'Señal',
-                            value: '${telemetry!.metadata!['signal']} dBm',
+                            value: '${widget.telemetry!.metadata!['signal']} dBm',
                           ),
                       ],
                     ),
@@ -209,24 +262,25 @@ class RealTimeValueCard extends StatelessWidget {
   }
   
   IconData _getIcon() {
-    switch (deviceType) {
+    print('DEBUG: Getting icon for type: ${widget.deviceType}');
+    switch (widget.deviceType.toLowerCase()) {
       case 'temperature':
-        return Icons.thermostat;
+        return Icons.thermostat_outlined; 
       case 'humidity':
         return Icons.water_drop;
       case 'occupancy':
-        return Icons.people;
+        return Icons.people_alt; 
       case 'light':
-        return Icons.lightbulb;
+        return Icons.wb_incandescent; 
       case 'energy':
-        return Icons.bolt;
+        return Icons.flash_on; 
       default:
         return Icons.sensors;
     }
   }
   
   Color _getGradientColor() {
-    switch (deviceType) {
+    switch (widget.deviceType.toLowerCase()) { // Safely lowercase
       case 'temperature':
         return AppColors.accentOrange;
       case 'humidity':
@@ -245,6 +299,11 @@ class RealTimeValueCard extends StatelessWidget {
   String _formatTimestamp(DateTime timestamp) {
     final now = DateTime.now();
     final diff = now.difference(timestamp);
+    
+    // Fix: Ensure we don't show negative times due to slight clock skews
+    if (diff.isNegative) {
+      return 'ahora';
+    }
     
     if (diff.inSeconds < 60) {
       return 'hace ${diff.inSeconds}s';

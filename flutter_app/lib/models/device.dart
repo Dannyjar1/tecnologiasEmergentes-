@@ -63,11 +63,15 @@ class Device {
   IconData get icon {
     switch (type) {
       case 'temperature':
-        return Icons.thermostat;
+        return Icons.thermostat_outlined;
       case 'occupancy':
-        return Icons.people;
+        return Icons.people_alt;
       case 'humidity':
         return Icons.water_drop;
+      case 'light':
+        return Icons.wb_incandescent;
+      case 'energy':
+        return Icons.flash_on;
       default:
         return Icons.sensors;
     }

@@ -6,25 +6,28 @@ import random
 from datetime import datetime
 
 # Configuration
-BROKER = "localhost"  # Use localhost for local development
+BROKER = "localhost"
 PORT = 1883
-DEVICE_ID = "aula-201-occ"
-TOPIC = f"campus/{DEVICE_ID}/occupancy"
+DEVICE_ID = "lab-01-energy"
+TOPIC = f"campus/{DEVICE_ID}/power"
 
-def get_realistic_occupancy():
-    """Returns occupancy based on the time of day"""
+def get_realistic_power():
+    """Returns power consumption based on time of day (kW)"""
     hour = datetime.now().hour
     
-    if 7 <= hour < 12:
-        return random.randint(20, 45)
+    # Simulate lab equipment power consumption patterns
+    if 7 <= hour < 9:
+        return round(random.uniform(2.5, 4.0), 2)   # Morning startup
+    elif 9 <= hour < 12:
+        return round(random.uniform(4.0, 6.5), 2)   # Peak usage (classes)
     elif 12 <= hour < 14:
-        return random.randint(5, 15)
+        return round(random.uniform(3.0, 4.5), 2)   # Lunch (reduced)
     elif 14 <= hour < 18:
-        return random.randint(25, 40)
+        return round(random.uniform(4.5, 7.0), 2)   # Afternoon peak
     elif 18 <= hour < 22:
-        return random.randint(10, 25)
+        return round(random.uniform(2.0, 3.5), 2)   # Evening (cleanup)
     else:
-        return 0
+        return round(random.uniform(0.5, 1.5), 2)   # Night (base load: AC, servers)
 
 # Connection callback
 def on_connect(client, userdata, flags, rc, properties):
@@ -50,25 +53,30 @@ client.loop_start()
 # Wait for connection
 time.sleep(2)
 
-print(f"👨‍👩‍👧‍👦 Occupancy Simulator started: {DEVICE_ID}")
+print(f"⚡ Energy Simulator started: {DEVICE_ID}")
 print(f"📡 Publishing to topic: {TOPIC}\n")
 
 try:
     while True:
-        occupancy = get_realistic_occupancy()
+        power = get_realistic_power()
 
         payload = {
-            "value": occupancy,
-            "unit": "persons",
-            "timestamp": datetime.utcnow().isoformat() + "Z"
+            "value": power,
+            "unit": "kW",
+            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "metadata": {
+                "voltage": round(random.uniform(220, 230), 1),
+                "frequency": round(random.uniform(59.8, 60.2), 1)
+            }
         }
 
         # Publish via MQTT
         result = client.publish(TOPIC, json.dumps(payload), qos=1)
         result.wait_for_publish()
-        print(f"📤 Published: {occupancy} persons")
+        print(f"📤 Published: {power} kW")
 
-        time.sleep(10)
+        # Wait 5 seconds
+        time.sleep(5)
 
 except KeyboardInterrupt:
     print("\n🛑 Simulator stopped")

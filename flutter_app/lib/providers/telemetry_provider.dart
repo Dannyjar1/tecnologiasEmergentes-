@@ -14,8 +14,11 @@ class TelemetryProvider with ChangeNotifier {
   // Real-time telemetry streams
   final Map<String, StreamSubscription<Telemetry>> _streamSubscriptions = {};
   
-  // Latest telemetry value per device
+  // Latest telemetry value per device (legacy/single)
   final Map<String, Telemetry> _latestValues = {};
+  
+  // Latest telemetry value per device AND metric (multi-sensor support)
+  final Map<String, Map<String, Telemetry>> _latestByMetric = {};
   
   bool _isLoading = false;
   String? _error;
@@ -28,9 +31,14 @@ class TelemetryProvider with ChangeNotifier {
     return _telemetryData[deviceId] ?? [];
   }
   
-  // Get latest value for a device
+  // Get latest value for a device (generic/last received)
   Telemetry? getLatestValue(String deviceId) {
     return _latestValues[deviceId];
+  }
+
+  // Get latest value specifically for a metric
+  Telemetry? getLatestValueForMetric(String deviceId, String metric) {
+    return _latestByMetric[deviceId]?[metric];
   }
   
   // Load historical telemetry from API
@@ -59,6 +67,14 @@ class TelemetryProvider with ChangeNotifier {
       // Set latest value if available
       if (data.isNotEmpty) {
         _latestValues[deviceId] = data.first;
+        
+        // Populate by metric
+        if (!_latestByMetric.containsKey(deviceId)) {
+          _latestByMetric[deviceId] = {};
+        }
+        for (var t in data.reversed) { // reversed so latest overwrites earlier
+             _latestByMetric[deviceId]![t.metric] = t;
+        }
       }
       
       _error = null;
@@ -81,8 +97,14 @@ class TelemetryProvider with ChangeNotifier {
     
     _streamSubscriptions[deviceId] = stream.listen(
       (telemetry) {
-        // Update latest value
+        // Update latest value (global)
         _latestValues[deviceId] = telemetry;
+
+        // Update latest value (per metric)
+        if (!_latestByMetric.containsKey(deviceId)) {
+          _latestByMetric[deviceId] = {};
+        }
+        _latestByMetric[deviceId]![telemetry.metric] = telemetry;
         
         // Add to historical data (keep last N points)
         if (!_telemetryData.containsKey(deviceId)) {
@@ -119,6 +141,7 @@ class TelemetryProvider with ChangeNotifier {
   void clearDeviceData(String deviceId) {
     _telemetryData.remove(deviceId);
     _latestValues.remove(deviceId);
+    _latestByMetric.remove(deviceId);
     unsubscribeFromRealTime(deviceId);
     notifyListeners();
   }

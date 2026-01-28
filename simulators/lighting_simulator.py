@@ -8,23 +8,28 @@ from datetime import datetime
 # Configuration
 BROKER = "localhost"  # Use localhost for local development
 PORT = 1883
-DEVICE_ID = "aula-201-occ"
-TOPIC = f"campus/{DEVICE_ID}/occupancy"
+DEVICE_ID = "lab-01-light"
+TOPIC = f"campus/{DEVICE_ID}/illumination"
 
-def get_realistic_occupancy():
-    """Returns occupancy based on the time of day"""
+def get_realistic_light():
+    """Returns light level based on time of day"""
     hour = datetime.now().hour
     
-    if 7 <= hour < 12:
-        return random.randint(20, 45)
+    # Simulate natural and artificial lighting
+    if 6 <= hour < 8:
+        return random.randint(100, 300)   # Dawn
+    elif 8 <= hour < 12:
+        return random.randint(400, 800)   # Morning (windows + lights)
     elif 12 <= hour < 14:
-        return random.randint(5, 15)
+        return random.randint(600, 1000)  # Noon (peak)
     elif 14 <= hour < 18:
-        return random.randint(25, 40)
-    elif 18 <= hour < 22:
-        return random.randint(10, 25)
+        return random.randint(400, 700)   # Afternoon
+    elif 18 <= hour < 20:
+        return random.randint(200, 400)   # Evening (artificial lights)
+    elif 20 <= hour < 22:
+        return random.randint(100, 300)   # Night (reduced lighting)
     else:
-        return 0
+        return random.randint(0, 50)      # Closed (security lights only)
 
 # Connection callback
 def on_connect(client, userdata, flags, rc, properties):
@@ -50,25 +55,30 @@ client.loop_start()
 # Wait for connection
 time.sleep(2)
 
-print(f"👨‍👩‍👧‍👦 Occupancy Simulator started: {DEVICE_ID}")
+print(f"💡 Lighting Simulator started: {DEVICE_ID}")
 print(f"📡 Publishing to topic: {TOPIC}\n")
 
 try:
     while True:
-        occupancy = get_realistic_occupancy()
+        light_level = get_realistic_light()
 
         payload = {
-            "value": occupancy,
-            "unit": "persons",
-            "timestamp": datetime.utcnow().isoformat() + "Z"
+            "value": light_level,
+            "unit": "lux",
+            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "metadata": {
+                "battery": random.randint(70, 100),
+                "signal": random.randint(-60, -30)
+            }
         }
 
         # Publish via MQTT
         result = client.publish(TOPIC, json.dumps(payload), qos=1)
         result.wait_for_publish()
-        print(f"📤 Published: {occupancy} persons")
+        print(f"📤 Published: {light_level} lux")
 
-        time.sleep(10)
+        # Wait 5 seconds
+        time.sleep(5)
 
 except KeyboardInterrupt:
     print("\n🛑 Simulator stopped")
