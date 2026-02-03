@@ -6,8 +6,10 @@ import random
 from datetime import datetime
 
 # Configuration
-BROKER = "localhost"
+BROKER = "68.183.174.210"     # IP pública del VPS (o mqtt.uidehub.tech)
 PORT = 1883
+MQTT_USER = "mqtt_user"       # el usuario real creado en mosquitto_passwd
+MQTT_PASS = "mysecretpws"     # tu clave real
 DEVICE_ID = "lab-01-energy"
 TOPIC = f"campus/{DEVICE_ID}/power"
 
@@ -44,6 +46,8 @@ def on_publish(client, userdata, mid, rc, properties):
 client = mqtt.Client(CallbackAPIVersion.VERSION2, client_id=DEVICE_ID)
 client.on_connect = on_connect
 client.on_publish = on_publish
+
+client.username_pw_set(MQTT_USER, MQTT_PASS)
 
 # Connect to broker
 print(f"🔌 Connecting to MQTT broker at {BROKER}:{PORT}...")
