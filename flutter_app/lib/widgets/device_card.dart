@@ -1,5 +1,7 @@
+import 'package:campus_iot_app/config/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:campus_iot_app/models/device.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class DeviceCard extends StatelessWidget {
   final Device device;
@@ -15,9 +17,10 @@ class DeviceCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
-      elevation: 3,
+      elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: AppColors.divider),
       ),
       child: InkWell(
         onTap: onTap,
@@ -25,50 +28,31 @@ class DeviceCard extends StatelessWidget {
         child: Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
-            gradient: LinearGradient(
-              colors: [
-                device.statusColor.withOpacity(0.05),
-                device.statusColor.withOpacity(0.02),
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
+            color: AppColors.surface,
           ),
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Row(
               children: [
-                // Icon with gradient background
+                // Icon
                 Container(
-                  width: 60,
-                  height: 60,
+                  width: 56,
+                  height: 56,
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        device.statusColor.withOpacity(0.8),
-                        device.statusColor.withOpacity(0.6),
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
+                    color: _getStatusColor().withOpacity(0.1),
                     borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: device.statusColor.withOpacity(0.3),
-                        blurRadius: 8,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
+                    border:
+                        Border.all(color: _getStatusColor().withOpacity(0.1)),
                   ),
                   child: Icon(
                     device.icon,
-                    color: Colors.white,
-                    size: 30,
+                    color: _getStatusColor(),
+                    size: 28,
                   ),
                 ),
-                
+
                 const SizedBox(width: 16),
-                
+
                 // Device Info
                 Expanded(
                   child: Column(
@@ -76,16 +60,17 @@ class DeviceCard extends StatelessWidget {
                     children: [
                       Text(
                         device.name,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
+                        style: GoogleFonts.inter(
+                          fontWeight: FontWeight.w600,
                           fontSize: 16,
+                          color: AppColors.textPrimary,
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         device.location ?? 'Sin ubicación',
-                        style: TextStyle(
-                          color: Colors.grey[600],
+                        style: GoogleFonts.inter(
+                          color: AppColors.textSecondary,
                           fontSize: 13,
                         ),
                       ),
@@ -99,12 +84,8 @@ class DeviceCard extends StatelessWidget {
                               vertical: 4,
                             ),
                             decoration: BoxDecoration(
-                              color: device.statusColor.withOpacity(0.15),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: device.statusColor.withOpacity(0.3),
-                                width: 1,
-                              ),
+                              color: _getStatusColor().withOpacity(0.05),
+                              borderRadius: BorderRadius.circular(8),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
@@ -113,36 +94,38 @@ class DeviceCard extends StatelessWidget {
                                   width: 6,
                                   height: 6,
                                   decoration: BoxDecoration(
-                                    color: device.statusColor,
+                                    color: _getStatusColor(),
                                     shape: BoxShape.circle,
                                   ),
                                 ),
                                 const SizedBox(width: 6),
                                 Text(
                                   device.status.toUpperCase(),
-                                  style: TextStyle(
+                                  style: GoogleFonts.inter(
                                     fontSize: 10,
                                     fontWeight: FontWeight.bold,
-                                    color: device.statusColor,
+                                    color: _getStatusColor(),
+                                    letterSpacing: 0.5,
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                          
+
                           if (device.lastSeen != null) ...[
                             const SizedBox(width: 12),
-                            Icon(
+                            const Icon(
                               Icons.access_time,
                               size: 14,
-                              color: Colors.grey[500],
+                              color: AppColors.textSecondary,
                             ),
                             const SizedBox(width: 4),
                             Text(
                               _formatLastSeen(device.lastSeen!),
-                              style: TextStyle(
+                              style: GoogleFonts.inter(
                                 fontSize: 11,
-                                color: Colors.grey[600],
+                                color: AppColors.textSecondary,
+                                fontWeight: FontWeight.w500,
                               ),
                             ),
                           ],
@@ -151,19 +134,12 @@ class DeviceCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                
+
                 // Chevron
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[100],
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.arrow_forward_ios,
-                    size: 16,
-                    color: Colors.grey[600],
-                  ),
+                Icon(
+                  Icons.arrow_forward_ios,
+                  size: 16,
+                  color: AppColors.textSecondary.withOpacity(0.5),
                 ),
               ],
             ),
@@ -173,11 +149,21 @@ class DeviceCard extends StatelessWidget {
     );
   }
 
+  Color _getStatusColor() {
+    if (device.status == 'active') {
+      return AppColors.success;
+    } else if (device.status == 'inactive') {
+      return AppColors.textSecondary; // Grey for inactive in enterprise theme
+    } else {
+      return AppColors.warning;
+    }
+  }
+
   String _formatLastSeen(DateTime lastSeen) {
     final diff = DateTime.now().difference(lastSeen);
     if (diff.inMinutes < 1) return 'Ahora';
-    if (diff.inMinutes < 60) return 'Hace ${diff.inMinutes}m';
-    if (diff.inHours < 24) return 'Hace ${diff.inHours}h';
-    return 'Hace ${diff.inDays}d';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m';
+    if (diff.inHours < 24) return '${diff.inHours}h';
+    return '${diff.inDays}d';
   }
 }

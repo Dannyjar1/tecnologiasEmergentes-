@@ -1,3 +1,4 @@
+import 'package:campus_iot_app/config/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:campus_iot_app/models/device.dart';
@@ -6,10 +7,10 @@ import 'package:campus_iot_app/providers/device_provider.dart';
 import 'package:campus_iot_app/providers/telemetry_provider.dart';
 import 'package:campus_iot_app/widgets/telemetry_chart.dart';
 import 'package:campus_iot_app/widgets/real_time_value_card.dart';
-import 'package:campus_iot_app/config/theme.dart';
 import 'package:campus_iot_app/config/constants.dart';
 import 'package:intl/intl.dart';
 import 'package:campus_iot_app/screens/devices/edit_device_screen.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class DeviceDetailScreen extends StatefulWidget {
   final Device device;
@@ -27,7 +28,6 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
 
     // Defer state updates to after the first frame
     // CORRECCIÓN 1: Posponemos la carga de datos hasta después del primer renderizado
-    // para evitar el error "setState() called during build".
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final telemetryProvider = context.read<TelemetryProvider>();
       // Load historical telemetry
@@ -46,15 +46,13 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // CORRECCIÓN 2: Guardamos la referencia al Provider aquí, mientras el contexto es válido.
-    // Intentar leer el contexto en dispose() lanzaría "Looking up a deactivated widget's ancestor is unsafe".
+    // CORRECCIÓN 2: Guardamos la referencia al Provider aquí
     _telemetryProvider = context.read<TelemetryProvider>();
   }
 
   @override
   void dispose() {
     // Unsubscribe from real-time updates
-    // Usamos la referencia guardada (_telemetryProvider) para limpiar la suscripción de forma segura.
     _telemetryProvider.unsubscribeFromRealTime(
       widget.device.deviceId,
     );
@@ -90,250 +88,218 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
     final sensorTypes = _getSensorTypes();
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.device.name),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.edit),
-            onPressed: () {
-              _showEditDialog(context);
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.delete),
-            onPressed: () {
-              _showDeleteConfirmation(context);
-            },
-          ),
-        ],
-      ),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          await context.read<TelemetryProvider>().loadTelemetry(
-                deviceId: widget.device.deviceId,
-                limit: 100,
-              );
-        },
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Device Info Card
-              _buildDeviceInfoCard(),
+      backgroundColor: AppColors.background,
+      body: CustomScrollView(
+        slivers: [
+          _buildSliverAppBar(context),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildStatusBanner(),
+                  const SizedBox(height: 24),
 
-              const SizedBox(height: 24),
+                  // Dynamic Real-time Cards
+                  if (sensorTypes.isEmpty)
+                    const Center(
+                        child: Text("No sensors configured for this device.")),
 
-              // Dynamic Real-time Cards
-              if (sensorTypes.isEmpty)
-                const Center(
-                    child: Text("No sensors configured for this device.")),
+                  ...sensorTypes.map((type) {
+                    final metric = _getMetricForType(type);
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 16.0),
+                      child: Consumer2<TelemetryProvider, DeviceProvider>(
+                        builder: (context, telemetryProvider, deviceProvider,
+                            child) {
+                          final latestValue =
+                              telemetryProvider.getLatestValueForMetric(
+                                  widget.device.deviceId, metric);
 
-              ...sensorTypes.map((type) {
-                final metric = _getMetricForType(type);
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 16.0),
-                  child: Consumer2<TelemetryProvider, DeviceProvider>(
-                    builder:
-                        (context, telemetryProvider, deviceProvider, child) {
-                      final latestValue =
-                          telemetryProvider.getLatestValueForMetric(
-                              widget.device.deviceId, metric);
+                          // Get reactive device status
+                          final currentDevice = deviceProvider.devices
+                              .firstWhere(
+                                  (d) => d.deviceId == widget.device.deviceId,
+                                  orElse: () => widget.device);
 
-                      // Get reactive device status
-                      final currentDevice = deviceProvider.devices.firstWhere(
-                          (d) => d.deviceId == widget.device.deviceId,
-                          orElse: () => widget.device);
-
-                      return RealTimeValueCard(
-                        telemetry: latestValue,
-                        deviceType: type,
-                        isLoading:
-                            telemetryProvider.isLoading && latestValue == null,
-                        isOffline: currentDevice.status == 'inactive',
-                      );
-                    },
-                  ),
-                );
-              }).toList(),
-
-              const SizedBox(height: 24),
-
-              // Historical Charts
-              const Text(
-                'Histórico',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 12),
-
-              ...sensorTypes.map((type) {
-                final metric = _getMetricForType(type);
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 24.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                        child: Text(DeviceTypes.getDisplayName(type),
-                            style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                color: Colors.grey[700])),
-                      ),
-                      const SizedBox(height: 8),
-                      Consumer<TelemetryProvider>(
-                        builder: (context, provider, child) {
-                          final history = provider
-                              .getTelemetryHistory(widget.device.deviceId)
-                              .where((t) => t.metric == metric)
-                              .toList();
-
-                          return Card(
-                            child: Container(
-                              height: 250,
-                              padding: const EdgeInsets.all(8),
-                              child: provider.isLoading && history.isEmpty
-                                  ? const Center(
-                                      child: CircularProgressIndicator())
-                                  : TelemetryChart(
-                                      data: history,
-                                      metric:
-                                          type, // Pass original type for color/labels
-                                      lineColor: _getChartColor(type),
-                                    ),
-                            ),
+                          return RealTimeValueCard(
+                            telemetry: latestValue,
+                            deviceType: type,
+                            isLoading: telemetryProvider.isLoading &&
+                                latestValue == null,
+                            isOffline: currentDevice.status == 'inactive',
                           );
                         },
                       ),
-                    ],
-                  ),
-                );
-              }).toList(),
+                    );
+                  }).toList(),
 
-              const SizedBox(height: 24),
+                  const SizedBox(height: 32),
 
-              // Device Metadata
-              _buildMetadataSection(),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDeviceInfoCard() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                CircleAvatar(
-                  backgroundColor: widget.device.statusColor.withOpacity(0.2),
-                  radius: 30,
-                  child: Icon(
-                    widget.device.icon,
-                    color: widget.device.statusColor,
-                    size: 32,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        widget.device.name,
-                        style: const TextStyle(
-                          fontSize: 24,
+                  // Historical Charts Header
+                  Text(
+                    'Análisis Histórico',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          color: AppColors.primary,
                           fontWeight: FontWeight.bold,
                         ),
-                      ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Container(
-                            width: 10,
-                            height: 10,
-                            decoration: BoxDecoration(
-                              color: widget.device.statusColor,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            widget.device.status.toUpperCase(),
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: widget.device.statusColor,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
                   ),
-                ),
-              ],
-            ),
+                  const SizedBox(height: 16),
 
-            const Divider(height: 32),
+                  // Charts
+                  ...sensorTypes.map((type) {
+                    final metric = _getMetricForType(type);
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 24.0),
+                      child: _buildChartCard(type, metric),
+                    );
+                  }).toList(),
 
-            _buildInfoRow(Icons.fingerprint, 'ID', widget.device.deviceId),
-            _buildInfoRow(Icons.category, 'Tipo',
-                _getSensorTypes().join(', ')), // Show all types
-            _buildInfoRow(Icons.location_on, 'Ubicación',
-                widget.device.location ?? 'No especificada'),
-            if (widget.device.building != null)
-              _buildInfoRow(
-                  Icons.business, 'Edificio', widget.device.building!),
-            if (widget.device.floor != null)
-              _buildInfoRow(
-                  Icons.stairs, 'Piso', widget.device.floor.toString()),
-            _buildInfoRow(Icons.settings_input_antenna, 'Protocolo',
-                widget.device.protocol),
-            if (widget.device.lastSeen != null)
-              _buildInfoRow(
-                  Icons.access_time,
-                  'Última conexión',
-                  DateFormat('dd/MM/yyyy HH:mm:ss')
-                      .format(widget.device.lastSeen!)),
-          ],
-        ),
-      ),
-    );
-  }
+                  const SizedBox(height: 24),
 
-  Widget _buildInfoRow(IconData icon, String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        children: [
-          Icon(icon, size: 20, color: Colors.grey[600]),
-          const SizedBox(width: 12),
-          Text(
-            '$label:',
-            style: TextStyle(
-              fontWeight: FontWeight.w500,
-              color: Colors.grey[700],
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(fontWeight: FontWeight.w600),
-              textAlign: TextAlign.right,
+                  // Device Metadata
+                  _buildMetadataSection(),
+
+                  const SizedBox(height: 40),
+                ],
+              ),
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildSliverAppBar(BuildContext context) {
+    return SliverAppBar(
+      expandedHeight: 120.0,
+      pinned: true,
+      backgroundColor: AppColors.primary,
+      elevation: 0,
+      scrolledUnderElevation: 2,
+      flexibleSpace: FlexibleSpaceBar(
+        titlePadding: const EdgeInsets.only(
+            left: 60, bottom: 16), // Adjust for back button
+        title: Text(
+          widget.device.name,
+          style: GoogleFonts.montserrat(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
+          ),
+        ),
+        background: Container(color: AppColors.primary),
+      ),
+      leading: IconButton(
+        icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
+        onPressed: () => Navigator.pop(context),
+      ),
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.edit_outlined, color: Colors.white70),
+          onPressed: () => _showEditDialog(context),
+        ),
+        IconButton(
+          icon: const Icon(Icons.delete_outline, color: AppColors.uideGold),
+          onPressed: () => _showDeleteConfirmation(context),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatusBanner() {
+    bool isActive = widget.device.status == 'active';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: isActive
+            ? AppColors.success.withOpacity(0.1)
+            : AppColors.error.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isActive
+              ? AppColors.success.withOpacity(0.3)
+              : AppColors.error.withOpacity(0.3),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            isActive ? Icons.check_circle : Icons.error,
+            color: isActive ? AppColors.success : AppColors.error,
+            size: 20,
+          ),
+          const SizedBox(width: 8),
+          Text(
+            isActive ? 'Dispositivo Activo' : 'Dispositivo Inactivo',
+            style: GoogleFonts.inter(
+              color: isActive ? AppColors.success : AppColors.error,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(width: 8),
+          if (widget.device.lastSeen != null)
+            Text(
+              '• Última vez: ${DateFormat('HH:mm').format(widget.device.lastSeen!)}',
+              style: GoogleFonts.inter(
+                color: AppColors.textSecondary,
+                fontSize: 12,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildChartCard(String type, String metric) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 4.0, bottom: 8.0),
+          child: Text(
+            DeviceTypes.getDisplayName(type),
+            style: GoogleFonts.inter(
+                fontWeight: FontWeight.w600, color: AppColors.textSecondary),
+          ),
+        ),
+        Container(
+          height: 280,
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: AppColors.divider),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.03),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          padding: const EdgeInsets.all(16),
+          child: Consumer<TelemetryProvider>(
+            builder: (context, provider, child) {
+              final history = provider
+                  .getTelemetryHistory(widget.device.deviceId)
+                  .where((t) => t.metric == metric)
+                  .toList();
+
+              if (provider.isLoading && history.isEmpty) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              return TelemetryChart(
+                data: history,
+                metric: type,
+                lineColor: _getChartColor(type),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 
@@ -342,7 +308,6 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
       return const SizedBox.shrink();
     }
 
-    // Filter out internal 'sensors' metadata as it's already shown as cards
     final displayMetadata = widget.device.metadata!.entries
         .where((e) => e.key != 'sensors')
         .toList();
@@ -354,34 +319,54 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Información Adicional', // Changed from 'Metadata' to be more user friendly
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
+        Text(
+          'Información Técnica',
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                color: AppColors.primary,
+                fontWeight: FontWeight.bold,
+              ),
         ),
         const SizedBox(height: 12),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: displayMetadata.map((entry) {
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        entry.key,
-                        style: const TextStyle(fontWeight: FontWeight.w500),
-                      ),
-                      Text(entry.value.toString()),
-                    ],
+        Container(
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.divider),
+          ),
+          child: Column(
+            children: displayMetadata.map((entry) {
+              final isLast = entry.key == displayMetadata.last.key;
+              return Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          entry.key.toUpperCase(),
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textSecondary,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                        Text(
+                          entry.value.toString(),
+                          style: GoogleFonts.inter(
+                            fontWeight: FontWeight.w500,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                );
-              }).toList(),
-            ),
+                  if (!isLast)
+                    const Divider(height: 1, color: AppColors.divider),
+                ],
+              );
+            }).toList(),
           ),
         ),
       ],
@@ -391,21 +376,23 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
   Color _getChartColor(String type) {
     switch (type) {
       case 'temperature':
-        return AppColors.accentOrange;
+        return const Color(0xFFF97316); // Orange 500
       case 'humidity':
-        return AppColors.infoBlue;
+        return const Color(0xFF3B82F6); // Blue 500
       case 'occupancy':
-        return AppColors.accentPurple;
+        return const Color(0xFF8B5CF6); // Violet 500
       case 'light':
-        return Colors.amber;
+        return const Color(0xFFEAB308); // Yellow 500
       case 'energy':
-        return Colors.green;
+        return const Color(0xFF22C55E); // Green 500
       default:
-        return AppColors.primaryBlue;
+        return AppColors.accent;
     }
   }
 
   void _showEditDialog(BuildContext context) async {
+    // Navigation logic implies logic not just UI, assuming this is correct or needs updating to new route names if changed.
+    // Keeping existing logic for now but wrapped in modern calls if needed.
     await Navigator.push(
       context,
       MaterialPageRoute(
@@ -413,7 +400,6 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
       ),
     );
 
-    // Refresh device info from provider to get updated status
     if (mounted) {
       final deviceProvider = context.read<DeviceProvider>();
       final updatedDevice = deviceProvider.devices.firstWhere(
@@ -422,14 +408,6 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
       );
 
       if (updatedDevice != widget.device) {
-        setState(() {
-          // We can't easily reassign widget.device as it's final in the State,
-          // but normally we would want the parent or a provider to handle this.
-          // For now, let's trigger a full refresh or just accept that
-          // provider.devices is updated, BUT widget.device is still old.
-          // Ideally, this screen should use Consumer<DeviceProvider> to find self.
-        });
-        // Trigger API reload just in case
         await deviceProvider.loadDevices();
         Navigator.pushReplacement(
             context,
@@ -445,9 +423,11 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Eliminar dispositivo'),
+        title: Text('Eliminar dispositivo',
+            style: GoogleFonts.montserrat(fontWeight: FontWeight.bold)),
         content: Text(
             '¿Estás seguro de que deseas eliminar "${widget.device.name}"?'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -456,11 +436,9 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(context);
-
               final success = await context.read<DeviceProvider>().deleteDevice(
                     widget.device.deviceId,
                   );
-
               if (mounted) {
                 if (success) {
                   Navigator.pop(context);
@@ -476,7 +454,7 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
               }
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.errorRed,
+              backgroundColor: AppColors.error,
             ),
             child: const Text('Eliminar'),
           ),

@@ -15,14 +15,14 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   final MqttService _mqttService = MqttService();
-  
+
   @override
   void initState() {
     super.initState();
     // Connect to MQTT broker on app start
     _connectToMqtt();
   }
-  
+
   Future<void> _connectToMqtt() async {
     try {
       await _mqttService.connect();
@@ -31,7 +31,7 @@ class _MyAppState extends State<MyApp> {
       print('⚠️ MQTT connection failed: $e');
     }
   }
-  
+
   @override
   void dispose() {
     _mqttService.disconnect();
@@ -47,8 +47,8 @@ class _MyAppState extends State<MyApp> {
       ],
       child: MaterialApp(
         title: 'Campus IoT',
-        theme: lightTheme,
-        darkTheme: darkTheme,
+        theme: AppTheme.lightTheme,
+        darkTheme: AppTheme.darkTheme,
         themeMode: ThemeMode.system, // Automatically switch between light/dark
         initialRoute: AppRoutes.dashboard,
         onGenerateRoute: AppRoutes.generateRoute,

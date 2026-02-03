@@ -3,13 +3,14 @@ import 'package:campus_iot_app/models/telemetry.dart';
 import 'package:campus_iot_app/config/theme.dart';
 import 'package:intl/intl.dart';
 import 'dart:async';
+import 'package:google_fonts/google_fonts.dart';
 
 class RealTimeValueCard extends StatefulWidget {
   final Telemetry? telemetry;
   final String deviceType;
   final bool isLoading;
   final bool isOffline;
-  
+
   const RealTimeValueCard({
     Key? key,
     this.telemetry,
@@ -45,22 +46,16 @@ class _RealTimeValueCardState extends State<RealTimeValueCard> {
   @override
   Widget build(BuildContext context) {
     return Card(
-      elevation: 4,
+      elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: AppColors.divider),
       ),
       child: Container(
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
-          gradient: LinearGradient(
-            colors: [
-              _getGradientColor().withOpacity(0.1),
-              _getGradientColor().withOpacity(0.05),
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
+          color: AppColors.surface,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -71,13 +66,13 @@ class _RealTimeValueCardState extends State<RealTimeValueCard> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: _getGradientColor().withOpacity(0.2),
+                    color: _getColor().withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(
                     _getIcon(),
-                    color: _getGradientColor(),
-                    size: 28,
+                    color: _getColor(),
+                    size: 24,
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -86,10 +81,10 @@ class _RealTimeValueCardState extends State<RealTimeValueCard> {
                   children: [
                     Text(
                       'Valor Actual',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[600],
-                        fontWeight: FontWeight.w500,
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -99,9 +94,9 @@ class _RealTimeValueCardState extends State<RealTimeValueCard> {
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: widget.isOffline 
-                            ? Colors.grey[300] 
-                            : AppColors.successGreen.withOpacity(0.1),
+                        color: widget.isOffline
+                            ? AppColors.textSecondary.withOpacity(0.1)
+                            : AppColors.success.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Row(
@@ -111,17 +106,21 @@ class _RealTimeValueCardState extends State<RealTimeValueCard> {
                             width: 6,
                             height: 6,
                             decoration: BoxDecoration(
-                              color: widget.isOffline ? Colors.grey[600] : AppColors.successGreen,
+                              color: widget.isOffline
+                                  ? AppColors.textSecondary
+                                  : AppColors.success,
                               shape: BoxShape.circle,
                             ),
                           ),
                           const SizedBox(width: 6),
                           Text(
                             widget.isOffline ? 'OFFLINE' : 'EN VIVO',
-                            style: TextStyle(
+                            style: GoogleFonts.inter(
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
-                              color: widget.isOffline ? Colors.grey[600] : AppColors.successGreen,
+                              color: widget.isOffline
+                                  ? AppColors.textSecondary
+                                  : AppColors.success,
                             ),
                           ),
                         ],
@@ -131,15 +130,15 @@ class _RealTimeValueCardState extends State<RealTimeValueCard> {
                 ),
               ],
             ),
-            
+
             const SizedBox(height: 24),
-            
+
             // Value
             if (widget.isLoading)
               const Center(
                 child: Padding(
                   padding: EdgeInsets.all(16.0),
-                  child: CircularProgressIndicator(),
+                  child: CircularProgressIndicator(strokeWidth: 2),
                 ),
               )
             else if (widget.isOffline)
@@ -148,19 +147,17 @@ class _RealTimeValueCardState extends State<RealTimeValueCard> {
                   padding: const EdgeInsets.all(16.0),
                   child: Column(
                     children: [
-                      Icon(Icons.cloud_off, size: 48, color: Colors.grey[400]),
+                      Icon(Icons.cloud_off,
+                          size: 48,
+                          color: AppColors.textSecondary.withOpacity(0.3)),
                       const SizedBox(height: 8),
                       Text(
-                        'Dispositivo Inactivo',
-                        style: TextStyle(
+                        'Desconectado',
+                        style: GoogleFonts.inter(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: Colors.grey[500],
+                          color: AppColors.textSecondary,
                         ),
-                      ),
-                      Text(
-                        'Sin recepción de datos',
-                        style: TextStyle(fontSize: 12, color: Colors.grey[400]),
                       ),
                     ],
                   ),
@@ -172,9 +169,9 @@ class _RealTimeValueCardState extends State<RealTimeValueCard> {
                   padding: const EdgeInsets.all(16.0),
                   child: Text(
                     'Esperando datos...',
-                    style: TextStyle(
+                    style: GoogleFonts.inter(
                       fontSize: 16,
-                      color: Colors.grey[400],
+                      color: AppColors.textSecondary,
                     ),
                   ),
                 ),
@@ -190,52 +187,54 @@ class _RealTimeValueCardState extends State<RealTimeValueCard> {
                     children: [
                       Text(
                         widget.telemetry!.value.toStringAsFixed(1),
-                        style: TextStyle(
-                          fontSize: 48,
+                        style: GoogleFonts.montserrat(
+                          fontSize: 56,
                           fontWeight: FontWeight.bold,
-                          color: _getGradientColor(),
+                          color: _getColor(),
+                          letterSpacing: -2,
                         ),
                       ),
                       const SizedBox(width: 8),
                       Text(
                         widget.telemetry!.unit ?? '',
-                        style: TextStyle(
-                          fontSize: 24,
+                        style: GoogleFonts.inter(
+                          fontSize: 20,
                           fontWeight: FontWeight.w500,
-                          color: Colors.grey[600],
+                          color: AppColors.textSecondary,
                         ),
                       ),
                     ],
                   ),
-                  
+
                   const SizedBox(height: 16),
-                  
+
                   // Timestamp
                   Row(
                     children: [
-                      Icon(
+                      const Icon(
                         Icons.access_time,
                         size: 16,
-                        color: Colors.grey[500],
+                        color: AppColors.textSecondary,
                       ),
                       const SizedBox(width: 6),
                       Text(
                         'Actualizado: ${_formatTimestamp(widget.telemetry!.timestamp)}',
-                        style: TextStyle(
+                        style: GoogleFonts.inter(
                           fontSize: 12,
-                          color: Colors.grey[600],
+                          color: AppColors.textSecondary,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                     ],
                   ),
-                  
+
                   // Metadata if available
                   if (widget.telemetry!.metadata != null) ...[
-                    const SizedBox(height: 12),
-                    const Divider(),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 16),
+                    Divider(color: AppColors.divider.withOpacity(0.5)),
+                    const SizedBox(height: 16),
                     Wrap(
-                      spacing: 16,
+                      spacing: 12,
                       runSpacing: 8,
                       children: [
                         if (widget.telemetry!.metadata!['battery'] != null)
@@ -248,7 +247,8 @@ class _RealTimeValueCardState extends State<RealTimeValueCard> {
                           _MetadataChip(
                             icon: Icons.signal_cellular_alt,
                             label: 'Señal',
-                            value: '${widget.telemetry!.metadata!['signal']} dBm',
+                            value:
+                                '${widget.telemetry!.metadata!['signal']} dBm',
                           ),
                       ],
                     ),
@@ -260,51 +260,49 @@ class _RealTimeValueCardState extends State<RealTimeValueCard> {
       ),
     );
   }
-  
+
   IconData _getIcon() {
-    print('DEBUG: Getting icon for type: ${widget.deviceType}');
     switch (widget.deviceType.toLowerCase()) {
       case 'temperature':
-        return Icons.thermostat_outlined; 
+        return Icons.thermostat;
       case 'humidity':
-        return Icons.water_drop;
+        return Icons.water_drop_outlined;
       case 'occupancy':
-        return Icons.people_alt; 
+        return Icons.people_outline;
       case 'light':
-        return Icons.wb_incandescent; 
+        return Icons.light_mode_outlined;
       case 'energy':
-        return Icons.flash_on; 
+        return Icons.bolt;
       default:
         return Icons.sensors;
     }
   }
-  
-  Color _getGradientColor() {
-    switch (widget.deviceType.toLowerCase()) { // Safely lowercase
+
+  Color _getColor() {
+    switch (widget.deviceType.toLowerCase()) {
       case 'temperature':
-        return AppColors.accentOrange;
+        return const Color(0xFFF97316); // Orange 500
       case 'humidity':
-        return AppColors.infoBlue;
+        return const Color(0xFF3B82F6); // Blue 500
       case 'occupancy':
-        return AppColors.accentPurple;
+        return const Color(0xFF8B5CF6); // Violet 500
       case 'light':
-        return AppColors.warningAmber;
+        return const Color(0xFFEAB308); // Yellow 500
       case 'energy':
-        return AppColors.successGreen;
+        return const Color(0xFF22C55E); // Green 500
       default:
-        return AppColors.primaryBlue;
+        return AppColors.accent;
     }
   }
-  
+
   String _formatTimestamp(DateTime timestamp) {
     final now = DateTime.now();
     final diff = now.difference(timestamp);
-    
-    // Fix: Ensure we don't show negative times due to slight clock skews
+
     if (diff.isNegative) {
       return 'ahora';
     }
-    
+
     if (diff.inSeconds < 60) {
       return 'hace ${diff.inSeconds}s';
     } else if (diff.inMinutes < 60) {
@@ -319,32 +317,33 @@ class _MetadataChip extends StatelessWidget {
   final IconData icon;
   final String label;
   final String value;
-  
+
   const _MetadataChip({
     required this.icon,
     required this.label,
     required this.value,
   });
-  
+
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.grey[100],
+        color: AppColors.background,
         borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.divider),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 16, color: Colors.grey[700]),
+          Icon(icon, size: 14, color: AppColors.textSecondary),
           const SizedBox(width: 6),
           Text(
             '$label: $value',
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey[700],
-              fontWeight: FontWeight.w500,
+            style: GoogleFonts.inter(
+              fontSize: 11,
+              color: AppColors.textSecondary,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ],
