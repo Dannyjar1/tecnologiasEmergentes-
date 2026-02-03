@@ -6,24 +6,24 @@ class AppColors {
   static const Color primaryBlue = Color(0xFF2196F3);
   static const Color primaryDark = Color(0xFF1976D2);
   static const Color primaryLight = Color(0xFF64B5F6);
-  
+
   // Accent Colors
   static const Color accentPurple = Color(0xFF9C27B0);
   static const Color accentOrange = Color(0xFFF57C00);
-  
+
   // Status Colors
   static const Color successGreen = Color(0xFF4CAF50);
   static const Color warningAmber = Color(0xFFFFA726);
   static const Color errorRed = Color(0xFFF44336);
   static const Color infoBlue = Color(0xFF2196F3);
-  
+
   // Neutral Colors
   static const Color background = Color(0xFFF5F5F5);
   static const Color surface = Color(0xFFFFFFFF);
   static const Color textPrimary = Color(0xFF212121);
   static const Color textSecondary = Color(0xFF757575);
   static const Color divider = Color(0xFFBDBDBD);
-  
+
   // Dark Theme Colors
   static const Color darkBackground = Color(0xFF121212);
   static const Color darkSurface = Color(0xFF1E1E1E);
@@ -35,7 +35,7 @@ class AppColors {
 final ThemeData lightTheme = ThemeData(
   useMaterial3: true,
   brightness: Brightness.light,
-  
+
   colorScheme: ColorScheme.light(
     primary: AppColors.primaryBlue,
     primaryContainer: AppColors.primaryLight,
@@ -49,7 +49,7 @@ final ThemeData lightTheme = ThemeData(
     onBackground: AppColors.textPrimary,
     onSurface: AppColors.textPrimary,
   ),
-  
+
   // AppBar Theme
   appBarTheme: const AppBarTheme(
     elevation: 0,
@@ -63,23 +63,23 @@ final ThemeData lightTheme = ThemeData(
       fontWeight: FontWeight.w600,
     ),
   ),
-  
+
   // Card Theme
-  cardTheme: CardTheme(
+  cardTheme: CardThemeData(
     elevation: 2,
     shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(12),
     ),
     margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 0),
   ),
-  
+
   // Floating Action Button Theme
   floatingActionButtonTheme: const FloatingActionButtonThemeData(
     backgroundColor: AppColors.primaryBlue,
     foregroundColor: Colors.white,
     elevation: 4,
   ),
-  
+
   // Input Decoration Theme
   inputDecorationTheme: InputDecorationTheme(
     filled: true,
@@ -102,7 +102,7 @@ final ThemeData lightTheme = ThemeData(
     ),
     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
   ),
-  
+
   // Elevated Button Theme
   elevatedButtonTheme: ElevatedButtonThemeData(
     style: ElevatedButton.styleFrom(
@@ -119,7 +119,7 @@ final ThemeData lightTheme = ThemeData(
       ),
     ),
   ),
-  
+
   // Text Theme
   textTheme: const TextTheme(
     displayLarge: TextStyle(
@@ -162,7 +162,7 @@ final ThemeData lightTheme = ThemeData(
 final ThemeData darkTheme = ThemeData(
   useMaterial3: true,
   brightness: Brightness.dark,
-  
+
   colorScheme: ColorScheme.dark(
     primary: AppColors.primaryBlue,
     primaryContainer: AppColors.primaryDark,
@@ -176,7 +176,7 @@ final ThemeData darkTheme = ThemeData(
     onBackground: AppColors.darkTextPrimary,
     onSurface: AppColors.darkTextPrimary,
   ),
-  
+
   // AppBar Theme
   appBarTheme: const AppBarTheme(
     elevation: 0,
@@ -190,9 +190,9 @@ final ThemeData darkTheme = ThemeData(
       fontWeight: FontWeight.w600,
     ),
   ),
-  
+
   // Card Theme
-  cardTheme: CardTheme(
+  cardTheme: CardThemeData(
     elevation: 2,
     color: AppColors.darkSurface,
     shape: RoundedRectangleBorder(
@@ -200,7 +200,7 @@ final ThemeData darkTheme = ThemeData(
     ),
     margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 0),
   ),
-  
+
   // Input Decoration Theme
   inputDecorationTheme: InputDecorationTheme(
     filled: true,
@@ -219,7 +219,7 @@ final ThemeData darkTheme = ThemeData(
     ),
     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
   ),
-  
+
   // Text Theme
   textTheme: const TextTheme(
     displayLarge: TextStyle(
