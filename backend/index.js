@@ -9,20 +9,31 @@ const app = express();
 const port = process.env.PORT || 3000;
 
 // PostgreSQL client - Using direct configuration to avoid dotenv issues
-const pool = new Pool({
+/*const pool = new Pool({
   user: 'campus_admin',
   host: 'postgres',  // Container name in docker-compose
   database: 'campus_iot',
   password: 'mysecretpassword',
   port: 5432,
+});*/
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
 });
 
 // MQTT client
-const mqttClient = mqtt.connect(process.env.MQTT_BROKER_URL, {
+/*const mqttClient = mqtt.connect(process.env.MQTT_BROKER_URL, {
   clientId: 'campus-iot-backend',
   clean: true,
   reconnectPeriod: 1000
+});*/
+
+const mqttClient = mqtt.connect(process.env.MQTT_BROKER_URL, {
+  clientId: 'campus-iot-backend',
+  clean: true,
+  reconnectPeriod: 1000,
 });
+
 
 mqttClient.on('connect', () => {
   console.log('✅ Connected to Mosquitto');
